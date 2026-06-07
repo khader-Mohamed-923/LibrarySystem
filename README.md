@@ -11,6 +11,11 @@ Below is the entity-relationship diagram representing the core domain of the lib
 
 ```mermaid
 erDiagram
+    %% Relationships (Placed at the top for better rendering layout)
+    BOOK ||--o{ LOAN : "has"
+    MEMBER ||--o{ LOAN : "places"
+
+    %% Entities
     BOOK {
         int Id PK
         string Title
@@ -24,7 +29,7 @@ erDiagram
         int Id PK
         string FullName
         string Email
-        datetime MembershipExpiryDate
+        DateTime MembershipExpiryDate
         decimal OutstandingFine
     }
 
@@ -32,11 +37,8 @@ erDiagram
         int Id PK
         int BookId FK
         int MemberId FK
-        datetime BorrowedAt
-        datetime DueDate
-        datetime ReturnedAt
+        DateTime BorrowedAt
+        DateTime DueDate
+        DateTime ReturnedAt
         decimal FineAmount
     }
-
-    BOOK ||--o{ LOAN : "can have multiple"
-    MEMBER ||--o{ LOAN : "creates multiple"
