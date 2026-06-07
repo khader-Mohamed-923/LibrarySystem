@@ -8,7 +8,6 @@ A professional Library Management System Web API built with **.NET 10** and **Cl
 
 Below is the entity-relationship diagram representing the core domain of the library system. 
 
-> *Note: Rendered automatically via GitHub Mermaid.*
 
 ```mermaid
 erDiagram
