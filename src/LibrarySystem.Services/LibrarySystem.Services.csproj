@@ -2,6 +2,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\LibrarySystem.Data\LibrarySystem.Data.csproj" />
+    <ProjectReference Include="..\LibrarySystem.Contracts\LibrarySystem.Contracts.csproj" />
   </ItemGroup>
 
   <PropertyGroup>
