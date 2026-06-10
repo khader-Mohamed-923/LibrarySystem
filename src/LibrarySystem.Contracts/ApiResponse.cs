@@ -17,7 +17,7 @@ public record ApiResponse<T>
 
     public static ApiResponse<T> SuccessResult(T data, string? message = null)
     {
-        return new ApiResponse<T>(true, data, message == null ? "operation Successfully":message);
+        return new ApiResponse<T>(true, data, message);
     }
 
     public static ApiResponse<T> FailureResult(string message)

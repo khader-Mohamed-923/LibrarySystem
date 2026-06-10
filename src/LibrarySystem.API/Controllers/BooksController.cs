@@ -1,7 +1,6 @@
 using Microsoft.AspNetCore.Mvc;
 using LibrarySystem.Contracts;
 using LibrarySystem.Contracts.Requests.Book;
-using LibrarySystem.Contracts.Responses;
 using LibrarySystem.Contracts.Responses.Book;
 using LibrarySystem.Services.Implementations;
 using LibrarySystem.Services.Exceptions;
@@ -27,9 +26,9 @@ public class BooksController(BookService bookService) : ControllerBase
             var book = await bookService.GetBookByIdAsync(id);
             return Ok(ApiResponse<BookResponseDto>.SuccessResult(book));
         }
-        catch (ResourceNotFoundException ex)
+        catch (LibraryException ex)
         {
-            return StatusCode(ex.HttpStatusCode, ErrorResponse.Create(ex.ErrorCode.GetCode(), ex.Message, ex.HttpStatusCode));
+            return StatusCode(ex.HttpStatusCode, new { code = ex.ErrorCode.GetCode(), message = ex.Message });
         }
     }
 
@@ -42,27 +41,23 @@ public class BooksController(BookService bookService) : ControllerBase
             return CreatedAtAction(nameof(GetById), new { id = createdBook.Id }, 
                 ApiResponse<BookResponseDto>.SuccessResult(createdBook));
         }
-        catch (DuplicateResourceException ex)
+        catch (LibraryException ex)
         {
-            return StatusCode(ex.HttpStatusCode, ErrorResponse.Create(ex.ErrorCode.GetCode(), ex.Message, ex.HttpStatusCode));
+            return StatusCode(ex.HttpStatusCode, new { code = ex.ErrorCode.GetCode(), message = ex.Message });
         }
     }
 
     [HttpPut("{id}")]
-    public async Task<ActionResult<ApiResponse<object>>> Update(int id, [FromBody] UpdateBookDto dto)
+    public async Task<ActionResult<ApiResponse<BookResponseDto>>> Update(int id, [FromBody] UpdateBookDto dto)
     {
         try
         {
-            await bookService.UpdateBookAsync(id, dto);
-            return Ok(ApiResponse<object>.SuccessResult(null!, "Book updated successfully."));
+            var updatedBook = await bookService.UpdateBookAsync(id, dto);
+            return Ok(ApiResponse<BookResponseDto>.SuccessResult(updatedBook, "Book updated successfully."));
         }
-        catch (ResourceNotFoundException ex)
+        catch (LibraryException ex)
         {
-            return StatusCode(ex.HttpStatusCode, ErrorResponse.Create(ex.ErrorCode.GetCode(), ex.Message, ex.HttpStatusCode));
-        }
-        catch (DuplicateResourceException ex)
-        {
-            return StatusCode(ex.HttpStatusCode, ErrorResponse.Create(ex.ErrorCode.GetCode(), ex.Message, ex.HttpStatusCode));
+            return StatusCode(ex.HttpStatusCode, new { code = ex.ErrorCode.GetCode(), message = ex.Message });
         }
     }
 
@@ -74,9 +69,9 @@ public class BooksController(BookService bookService) : ControllerBase
             await bookService.DeleteBookAsync(id);
             return Ok(ApiResponse<object>.SuccessResult(null!, "Book deleted successfully."));
         }
-        catch (ResourceNotFoundException ex)
+        catch (LibraryException ex)
         {
-            return StatusCode(ex.HttpStatusCode, ErrorResponse.Create(ex.ErrorCode.GetCode(), ex.Message, ex.HttpStatusCode));
+            return StatusCode(ex.HttpStatusCode, new { code = ex.ErrorCode.GetCode(), message = ex.Message });
         }
     }
 }

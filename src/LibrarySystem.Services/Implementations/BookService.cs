@@ -3,6 +3,7 @@ using LibrarySystem.Contracts.Responses.Book;
 using LibrarySystem.Data.Entities;
 using LibrarySystem.Data.Interfaces;
 using LibrarySystem.Services.Exceptions;
+using Microsoft.EntityFrameworkCore;
 
 namespace LibrarySystem.Services.Implementations;
 
@@ -56,7 +57,7 @@ public class BookService
         return books.Select(MapToDto).ToList();
     }
 
-    public async Task UpdateBookAsync(int id, UpdateBookDto dto)
+    public async Task<BookResponseDto> UpdateBookAsync(int id, UpdateBookDto dto)
     {
         var book = await _bookRepository.GetByIdAsync(id);
         if (book is null)
@@ -64,18 +65,42 @@ public class BookService
             throw new ResourceNotFoundException(ErrorCode.BOOK_NOT_FOUND);
         }
 
-        var isUnique = await _bookRepository.IsIsbnUniqueAsync(dto.Isbn, id);
-        if (!isUnique)
+        if (!string.IsNullOrWhiteSpace(dto.Isbn))
         {
-            throw new DuplicateResourceException(ErrorCode.DUPLICATE_ISBN);
+            var isUnique = await _bookRepository.IsIsbnUniqueAsync(dto.Isbn, id);
+            if (!isUnique)
+            {
+                throw new DuplicateResourceException(ErrorCode.DUPLICATE_ISBN);
+            }
+            book.ISBN = dto.Isbn;
         }
 
-        book.Title = dto.Title;
-        book.Author = dto.Author;
-        book.ISBN = dto.Isbn;
+        if (!string.IsNullOrWhiteSpace(dto.Title))
+        {
+            book.Title = dto.Title;
+        }
 
-        _bookRepository.Update(book);
-        await _unitOfWork.SaveChangesAsync();
+        if (!string.IsNullOrWhiteSpace(dto.Author))
+        {
+            book.Author = dto.Author;
+        }
+
+        _bookRepository.Update(book, dto.RowVersion);
+
+        try
+        {
+            await _unitOfWork.SaveChangesAsync();
+        }
+        catch (DbUpdateConcurrencyException)
+        {
+            throw new ConcurrencyException(ErrorCode.CONCURRENCY_CONFLICT);
+        }
+        catch (DbUpdateException)
+        {
+            throw;
+        }
+
+        return MapToDto(book);
     }
 
     public async Task DeleteBookAsync(int id)
