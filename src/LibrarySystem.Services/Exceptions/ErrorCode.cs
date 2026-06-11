@@ -1,16 +1,17 @@
-namespace LibrarySystem.Services.Exceptions; 
- 
-public enum ErrorCode 
-{ 
-    BOOK_NOT_FOUND, 
-    DUPLICATE_ISBN, 
-    MEMBER_NOT_FOUND, 
-    DUPLICATE_EMAIL, 
-    MEMBERSHIP_EXPIRED, 
-    OUTSTANDING_FINE, 
-    LOAN_LIMIT_EXCEEDED, 
-    BOOK_NOT_AVAILABLE, 
-    ALREADY_RETURNED, 
-    LOAN_NOT_FOUND, 
-    CONCURRENCY_CONFLICT 
+namespace LibrarySystem.Services.Exceptions;
+
+public enum ErrorCode
+{
+    BOOK_NOT_FOUND,
+    DUPLICATE_ISBN,
+    MEMBER_NOT_FOUND,
+    DUPLICATE_EMAIL,
+    MEMBERSHIP_EXPIRED,
+    OUTSTANDING_FINE,
+    LOAN_LIMIT_EXCEEDED,
+    BOOK_NOT_AVAILABLE,
+    ALREADY_RETURNED,
+    LOAN_NOT_FOUND,
+    CONCURRENCY_CONFLICT,
+    OVERDUE_BOOKS
 }

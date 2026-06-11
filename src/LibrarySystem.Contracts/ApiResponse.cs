@@ -15,13 +15,13 @@ public record ApiResponse<T>
         CreatedAt = DateTime.UtcNow;
     }
 
-    public static ApiResponse<T> SuccessResult(T data, string? message = null)
+    public static ApiResponse<T> SuccessResult(T data, string? message)
     {
-        return new ApiResponse<T>(true, data, message);
+        return new ApiResponse<T>(true, data, message == null ? "operation success" : message);
     }
 
-    public static ApiResponse<T> FailureResult(string message)
+    public static ApiResponse<T> FailureResult(string? message)
     {
-        return new ApiResponse<T>(false, default,  message == null ? "operation Failure":message);
+        return new ApiResponse<T>(false, default, message == null ? "operation Failure" : message);
     }
 }
