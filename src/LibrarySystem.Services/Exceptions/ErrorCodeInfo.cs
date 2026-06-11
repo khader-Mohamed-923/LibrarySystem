@@ -23,6 +23,8 @@ public static class ErrorCodeInfo
             ErrorCode.LOAN_NOT_FOUND => "The requested loan was not found.",
             ErrorCode.CONCURRENCY_CONFLICT => "A concurrency conflict occurred.",
             ErrorCode.OVERDUE_BOOKS => "The member has overdue books.",
+            ErrorCode.BOOK_HAS_LOANS => "Cannot delete the book because it has associated loans.",
+            ErrorCode.INVALID_TOTAL_COPIES => "Total copies cannot be less than the number of currently loaned-out copies.",
             _ => "An unexpected error occurred."
         };
     }
@@ -43,6 +45,8 @@ public static class ErrorCodeInfo
             ErrorCode.LOAN_NOT_FOUND => 404,
             ErrorCode.CONCURRENCY_CONFLICT => 409,
             ErrorCode.OVERDUE_BOOKS => 400,
+            ErrorCode.BOOK_HAS_LOANS => 400,
+            ErrorCode.INVALID_TOTAL_COPIES => 400,
             _ => 500
         };
     }
