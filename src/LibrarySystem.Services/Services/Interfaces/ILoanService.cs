@@ -1,7 +1,7 @@
 using LibrarySystem.Contracts.Requests.Loan;
 using LibrarySystem.Contracts.Responses.Loan;
 
-namespace LibrarySystem.Services.Interfaces;
+namespace LibrarySystem.Services.Services.Interfaces;
 
 public interface ILoanService
 {

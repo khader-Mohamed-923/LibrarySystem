@@ -3,14 +3,14 @@ using LibrarySystem.Contracts.Responses.Loan;
 using LibrarySystem.Data.Entities;
 using LibrarySystem.Data.Interfaces;
 using LibrarySystem.Services.Exceptions;
-using LibrarySystem.Services.Interfaces;
+using LibrarySystem.Services.Services.Interfaces;
 using Microsoft.EntityFrameworkCore;
 
-namespace LibrarySystem.Services.Implementations;
+namespace LibrarySystem.Services.Services.Implementations;
 
 public class LoanService : ILoanService
 {
-    private const int MaxActiveLoans = 5;
+    private const int MaxActiveLoans = 3;
     private const int LoanPeriodDays = 14;
     private const decimal FinePerDay = 0.50m;
 
@@ -18,17 +18,20 @@ public class LoanService : ILoanService
     private readonly IBookRepository _bookRepository;
     private readonly IMemberRepository _memberRepository;
     private readonly IUnitOfWork _unitOfWork;
+    private readonly TimeProvider _timeProvider; 
 
     public LoanService(
         ILoanRepository loanRepository,
         IBookRepository bookRepository,
         IMemberRepository memberRepository,
-        IUnitOfWork unitOfWork)
+        IUnitOfWork unitOfWork,
+        TimeProvider timeProvider) 
     {
         _loanRepository = loanRepository;
         _bookRepository = bookRepository;
         _memberRepository = memberRepository;
         _unitOfWork = unitOfWork;
+        _timeProvider = timeProvider;
     }
 
     public async Task<LoanResponse> LoanBookAsync(LoanBookRequest request)
@@ -55,7 +58,9 @@ public class LoanService : ILoanService
         if (activeCount >= MaxActiveLoans)
             throw new BusinessRuleViolationException(ErrorCode.LOAN_LIMIT_EXCEEDED);
 
-        var utcNow = DateTime.UtcNow;
+        // 🎯 تعديل التوقيت هنا: سحبنا الوقت من الـ Provider المحقون من بره
+        var utcNow = _timeProvider.GetUtcNow().DateTime;
+        
         var loan = new Loan
         {
             MemberId = request.MemberId,
@@ -81,6 +86,8 @@ public class LoanService : ILoanService
                 {
                     await _loanRepository.AddAsync(loan);
                 }
+                
+                _bookRepository.Update(trackedBook);
 
                 await _unitOfWork.SaveChangesAsync();
 
@@ -111,7 +118,9 @@ public class LoanService : ILoanService
         if (loan.IsReturned)
             throw new BusinessRuleViolationException(ErrorCode.ALREADY_RETURNED);
 
-        var utcNow = DateTime.UtcNow;
+        // 🎯 تعديل التوقيت هنا برضه: سحبنا الوقت من الـ Provider
+        var utcNow = _timeProvider.GetUtcNow().DateTime;
+        
         loan.IsReturned = true;
         loan.ReturnedAt = utcNow;
 
@@ -129,12 +138,9 @@ public class LoanService : ILoanService
         _loanRepository.Update(loan);
         _memberRepository.Update(loan.Member);
 
-        // Increment available copies
-        var book = await _bookRepository.GetByIdAsync(loan.BookId);
-        if (book != null)
+        if (loan.Book != null)
         {
-            book.AvailableCopies++;
-            _bookRepository.Update(book);
+            loan.Book.AvailableCopies++;
         }
 
         await _unitOfWork.SaveChangesAsync();

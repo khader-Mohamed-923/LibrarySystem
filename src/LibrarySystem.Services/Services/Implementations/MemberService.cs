@@ -3,11 +3,13 @@ using LibrarySystem.Contracts.Responses.Member;
 using LibrarySystem.Data.Entities;
 using LibrarySystem.Data.Interfaces;
 using LibrarySystem.Services.Exceptions;
+using LibrarySystem.Services.Services.Interfaces; 
 using Microsoft.EntityFrameworkCore;
 
-namespace LibrarySystem.Services.Implementations;
+namespace LibrarySystem.Services.Services.Implementations;
 
-public class MemberService
+
+public class MemberService : IMemberService
 {
     private readonly IMemberRepository _memberRepository;
     private readonly IUnitOfWork _unitOfWork;
@@ -130,6 +132,7 @@ public class MemberService
             Email = member.Email,
             Phone = member.Phone,
             MembershipDate = member.MembershipDate,
+            OutstandingFine = member.OutstandingFine,
             RowVersion = member.RowVersion
         };
     }

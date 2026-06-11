@@ -6,12 +6,11 @@ using LibrarySystem.API.Endpoints;
 
 var builder = WebApplication.CreateBuilder(args);
 
-builder.Services.AddControllers();
-builder.Services.AddOpenApi();
+builder.Services.AddApiServices();
 
 builder.Services.AddDataInfrastructure(builder.Configuration.GetConnectionString("DefaultConnection") ?? throw new InvalidOperationException("Connection string 'DefaultConnection' not found."));
 builder.Services.AddApplicationServices();
-builder.Services.AddApiServices();
+
 
 var app = builder.Build();
 

@@ -8,5 +8,6 @@ public class MemberResponseDto
     public string Email { get; set; } = string.Empty;
     public string Phone { get; set; } = string.Empty;
     public DateTime MembershipDate { get; set; }
+    public decimal OutstandingFine { get; set; }
     public byte[] RowVersion { get; set; } = [];
 }

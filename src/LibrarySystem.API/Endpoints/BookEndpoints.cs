@@ -1,6 +1,7 @@
 using LibrarySystem.Contracts;
 using LibrarySystem.Contracts.Responses.Book;
-using LibrarySystem.Services.Implementations;
+using LibrarySystem.Services.Services.Interfaces;
+using LibrarySystem.API.Filters; 
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Routing;
@@ -11,15 +12,17 @@ public static class BookEndpoints
 {
     public static IEndpointRouteBuilder MapBookEndpoints(this IEndpointRouteBuilder builder)
     {
-        var group = builder.MapGroup("api/books");
+        
+        var group = builder.MapGroup("api/books")
+                           .AddEndpointFilter<ValidationFilter>();
 
-        group.MapGet("/", async (BookService bookService) =>
+        group.MapGet("/", async (IBookService bookService) =>
         {
             var books = await bookService.GetAllBooksAsync();
             return Results.Ok(ApiResponse<IReadOnlyList<BookResponseDto>>.SuccessResult(books, "All books fetched successfully."));
         });
 
-        group.MapGet("/{id:int}", async (int id, BookService bookService) =>
+        group.MapGet("/{id:int}", async (int id, IBookService bookService) =>
         {
             var book = await bookService.GetBookByIdAsync(id);
             return Results.Ok(ApiResponse<BookResponseDto>.SuccessResult(book, "Book fetched successfully."));

@@ -2,7 +2,7 @@ using Microsoft.AspNetCore.Mvc;
 using LibrarySystem.Contracts;
 using LibrarySystem.Contracts.Requests.Loan;
 using LibrarySystem.Contracts.Responses.Loan;
-using LibrarySystem.Services.Interfaces;
+using LibrarySystem.Services.Services.Interfaces;
 
 namespace LibrarySystem.API.Controllers;
 
