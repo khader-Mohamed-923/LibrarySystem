@@ -3,11 +3,13 @@ using LibrarySystem.Contracts.Responses.Book;
 using LibrarySystem.Data.Entities;
 using LibrarySystem.Data.Interfaces;
 using LibrarySystem.Services.Exceptions;
+using LibrarySystem.Services.Services.Interfaces;
 using Microsoft.EntityFrameworkCore;
 
-namespace LibrarySystem.Services.Implementations;
+namespace LibrarySystem.Services.Services.Implementations;
 
-public class BookService
+
+public class BookService : IBookService 
 {
     private readonly IBookRepository _bookRepository;
     private readonly IUnitOfWork _unitOfWork;
@@ -85,6 +87,20 @@ public class BookService
             book.Author = dto.Author;
         }
 
+        if (dto.TotalCopies.HasValue)
+        {
+            var newTotal = dto.TotalCopies.Value;
+            var loanedOut = book.TotalCopies - book.AvailableCopies;
+
+            if (newTotal < loanedOut)
+            {
+                throw new BusinessRuleViolationException(ErrorCode.INVALID_TOTAL_COPIES);
+            }
+
+            book.AvailableCopies += newTotal - book.TotalCopies;
+            book.TotalCopies = newTotal;
+        }
+
         _bookRepository.Update(book, dto.RowVersion);
 
         try
@@ -110,6 +126,13 @@ public class BookService
         {
             throw new ResourceNotFoundException(ErrorCode.BOOK_NOT_FOUND);
         }
+
+        var hasActiveLoans = await _bookRepository.HasAnyLoansAsync(id); 
+    if (hasActiveLoans)
+    {
+        
+        throw new BusinessRuleViolationException(ErrorCode.BOOK_HAS_LOANS);
+    }
 
         _bookRepository.Delete(book);
         await _unitOfWork.SaveChangesAsync();
