@@ -29,6 +29,9 @@ public class MemberConfiguration : IEntityTypeConfiguration<Member>
             .HasMaxLength(20);
 
 
+        builder.Property(m => m.OutstandingFine)
+            .HasColumnType("decimal(10,2)")
+            .HasDefaultValue(0m);
 
         builder.Property(m => m.RowVersion)
             .IsRowVersion();

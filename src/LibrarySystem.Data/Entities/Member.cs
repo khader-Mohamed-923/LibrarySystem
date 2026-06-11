@@ -17,6 +17,8 @@ public class Member
 
     public DateTime MembershipDate { get; set; }
 
+    public decimal OutstandingFine { get; set; } = 0m;
+
     [Timestamp]
     public byte[] RowVersion { get; set; } = null!;
 
