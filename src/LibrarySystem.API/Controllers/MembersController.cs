@@ -1,15 +1,17 @@
+using FluentValidation;
 using Microsoft.AspNetCore.Mvc;
 using LibrarySystem.Contracts;
 using LibrarySystem.Contracts.Requests.Member;
 using LibrarySystem.Contracts.Responses.Member;
-using LibrarySystem.Services.Implementations;
+using LibrarySystem.Services.Services.Interfaces;
 using LibrarySystem.Services.Exceptions;
 
 namespace LibrarySystem.API.Controllers;
 
 [ApiController]
 [Route("api/[controller]")]
-public class MembersController(MemberService memberService) : ControllerBase
+
+public class MembersController(IMemberService memberService, IValidator<CreateMemberDto> createMemberValidator) : ControllerBase
 {
     [HttpGet]
     public async Task<ActionResult<ApiResponse<IReadOnlyList<MemberResponseDto>>>> GetAll()
@@ -28,6 +30,17 @@ public class MembersController(MemberService memberService) : ControllerBase
     [HttpPost]
     public async Task<ActionResult<ApiResponse<MemberResponseDto>>> Create([FromBody] CreateMemberDto dto)
     {
+        var validationResult = await createMemberValidator.ValidateAsync(dto);
+
+        if (!validationResult.IsValid)
+        {
+            var errors = validationResult.Errors
+                .GroupBy(e => e.PropertyName)
+                .ToDictionary(g => g.Key, g => g.Select(e => e.ErrorMessage).ToArray());
+
+            return BadRequest(ApiResponse<MemberResponseDto>.FailureResult("Validation failed.", errors));
+        }
+
         var createdMember = await memberService.CreateMemberAsync(dto);
         return CreatedAtAction(nameof(GetById), new { id = createdMember.Id }, 
             ApiResponse<MemberResponseDto>.SuccessResult(createdMember, "Member created successfully."));

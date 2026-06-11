@@ -1,28 +1,41 @@
+using FluentValidation;
 using Microsoft.AspNetCore.Mvc;
 using LibrarySystem.Contracts;
 using LibrarySystem.Contracts.Requests.Book;
 using LibrarySystem.Contracts.Responses.Book;
-using LibrarySystem.Services.Implementations;
-using LibrarySystem.Services.Exceptions;
+using LibrarySystem.Services.Services.Interfaces; 
 
 namespace LibrarySystem.API.Controllers;
 
 [ApiController]
 [Route("api/[controller]")]
-public class BooksController(BookService bookService) : ControllerBase
+
+public class BooksController(IBookService bookService, IValidator<CreateBookDto> createBookValidator) : ControllerBase
 {
 
     [HttpPost]
     public async Task<ActionResult<ApiResponse<BookResponseDto>>> Create([FromBody] CreateBookDto dto)
     {
+        var validationResult = await createBookValidator.ValidateAsync(dto);
+
+        if (!validationResult.IsValid)
+        {
+            var errors = validationResult.Errors
+                .GroupBy(e => e.PropertyName)
+                .ToDictionary(g => g.Key, g => g.Select(e => e.ErrorMessage).ToArray());
+
+            return BadRequest(ApiResponse<BookResponseDto>.FailureResult("Validation failed.", errors));
+        }
+
         var createdBook = await bookService.CreateBookAsync(dto);
         return Created($"/api/books/{createdBook.Id}", 
-            ApiResponse<BookResponseDto>.SuccessResult(createdBook, ""));
+            ApiResponse<BookResponseDto>.SuccessResult(createdBook, "Book created successfully."));
     }
 
     [HttpPut("{id}")]
     public async Task<ActionResult<ApiResponse<BookResponseDto>>> Update(int id, [FromBody] UpdateBookDto dto)
     {
+       
         var updatedBook = await bookService.UpdateBookAsync(id, dto);
         return Ok(ApiResponse<BookResponseDto>.SuccessResult(updatedBook, "Book updated successfully."));
     }
