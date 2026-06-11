@@ -35,9 +35,13 @@ public class BookRepository : IBookRepository
         await _context.Books.AddAsync(book);
     }
 
-    public void Update(Book book)
+    public void Update(Book book, byte[]? rowVersion = null)
     {
         _context.Books.Update(book);
+        if (rowVersion is not null && rowVersion.Length > 0)
+        {
+            _context.Entry(book).OriginalValues[nameof(Book.RowVersion)] = rowVersion;
+        }
     }
 
     public void Delete(Book book)

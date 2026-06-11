@@ -8,5 +8,5 @@ public class BookResponseDto
     public string Isbn { get; set; } = string.Empty;
     public int TotalCopies { get; set; }
     public int AvailableCopies { get; set; }
-    public byte[] RowVersion { get; set; } = Array.Empty<byte>();
+    public byte[] RowVersion { get; set; } = [];
 }

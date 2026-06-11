@@ -12,12 +12,12 @@ public static class DependencyInjection
         this IServiceCollection services,
         string connectionString)
     {
-       
         services.AddDbContext<LibraryDbContext>(options =>
             options.UseSqlServer(connectionString));
 
-   
         services.AddScoped<IBookRepository, BookRepository>();
+        services.AddScoped<IMemberRepository, MemberRepository>();
+        services.AddScoped<ILoanRepository, LoanRepository>();
         services.AddScoped<IUnitOfWork, UnitOfWork>();
 
         return services;

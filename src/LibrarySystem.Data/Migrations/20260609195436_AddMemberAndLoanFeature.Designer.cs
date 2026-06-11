@@ -4,6 +4,7 @@ using LibrarySystem.Data.Context;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 #nullable disable
@@ -11,9 +12,11 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace LibrarySystem.Data.Migrations
 {
     [DbContext(typeof(LibraryDbContext))]
-    partial class LibraryDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260609195436_AddMemberAndLoanFeature")]
+    partial class AddMemberAndLoanFeature
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -87,25 +90,8 @@ namespace LibrarySystem.Data.Migrations
                     b.Property<int>("BookId")
                         .HasColumnType("int");
 
-                    b.Property<DateTime>("DueDate")
-                        .HasColumnType("datetime2");
-
-                    b.Property<decimal>("FineAmount")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("decimal(10,2)")
-                        .HasDefaultValue(0m);
-
-                    b.Property<bool>("IsReturned")
-                        .HasColumnType("bit");
-
-                    b.Property<DateTime>("LoanDate")
-                        .HasColumnType("datetime2");
-
                     b.Property<int>("MemberId")
                         .HasColumnType("int");
-
-                    b.Property<DateTime?>("ReturnedAt")
-                        .HasColumnType("datetime2");
 
                     b.HasKey("Id");
 
@@ -113,7 +99,7 @@ namespace LibrarySystem.Data.Migrations
 
                     b.HasIndex("MemberId");
 
-                    b.ToTable("Loans");
+                    b.ToTable("Loan");
                 });
 
             modelBuilder.Entity("LibrarySystem.Data.Entities.Member", b =>
@@ -141,11 +127,6 @@ namespace LibrarySystem.Data.Migrations
 
                     b.Property<DateTime>("MembershipDate")
                         .HasColumnType("datetime2");
-
-                    b.Property<decimal>("OutstandingFine")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("decimal(10,2)")
-                        .HasDefaultValue(0m);
 
                     b.Property<string>("Phone")
                         .IsRequired()
