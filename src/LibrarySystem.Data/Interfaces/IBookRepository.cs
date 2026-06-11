@@ -10,4 +10,5 @@ public interface IBookRepository
     void Update(Book book, byte[]? rowVersion = null);
     void Delete(Book book);
     Task<bool> IsIsbnUniqueAsync(string isbn, int? excludeId = null);
+    Task<bool> HasAnyLoansAsync(int bookId);
 }

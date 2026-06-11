@@ -62,4 +62,10 @@ public class BookRepository : IBookRepository
 
         return !await query.AnyAsync();
     }
+
+    public async Task<bool> HasAnyLoansAsync(int bookId)
+{
+    
+    return await _context.Loans.AnyAsync(l => l.BookId == bookId);
+}
 }
