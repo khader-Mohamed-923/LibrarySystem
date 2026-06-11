@@ -22,6 +22,7 @@ public static class ErrorCodeInfo
             ErrorCode.ALREADY_RETURNED => "The loan has already been returned.",
             ErrorCode.LOAN_NOT_FOUND => "The requested loan was not found.",
             ErrorCode.CONCURRENCY_CONFLICT => "A concurrency conflict occurred.",
+            ErrorCode.OVERDUE_BOOKS => "The member has overdue books.",
             _ => "An unexpected error occurred."
         };
     }
@@ -41,6 +42,7 @@ public static class ErrorCodeInfo
             ErrorCode.ALREADY_RETURNED => 400,
             ErrorCode.LOAN_NOT_FOUND => 404,
             ErrorCode.CONCURRENCY_CONFLICT => 409,
+            ErrorCode.OVERDUE_BOOKS => 400,
             _ => 500
         };
     }
