@@ -1,8 +1,6 @@
-using System.Net;
 using System.Text.Json;
 using LibrarySystem.Contracts.Responses;
 using LibrarySystem.Services.Exceptions;
-
 
 namespace LibrarySystem.API.Middleware;
 
@@ -10,6 +8,11 @@ public class GlobalExceptionMiddleware
 {
     private readonly RequestDelegate _next;
     private readonly ILogger<GlobalExceptionMiddleware> _logger;
+
+    private static readonly JsonSerializerOptions JsonOptions = new()
+    {
+        PropertyNamingPolicy = JsonNamingPolicy.CamelCase
+    };
 
     public GlobalExceptionMiddleware(RequestDelegate next, ILogger<GlobalExceptionMiddleware> logger)
     {
@@ -23,26 +26,48 @@ public class GlobalExceptionMiddleware
         {
             await _next(context);
         }
-        catch (LibraryException ex)
-        {
-            _logger.LogWarning(ex, "A domain exception occurred: {Message}", ex.Message);
-            await HandleExceptionAsync(context, ex, ex.HttpStatusCode, ex.ErrorCode.GetCode());
-        }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "An unhandled exception occurred.");
-            await HandleExceptionAsync(context, ex, (int)HttpStatusCode.InternalServerError, "INTERNAL_SERVER_ERROR");
+            await HandleExceptionAsync(context, ex);
         }
     }
 
-    private static Task HandleExceptionAsync(HttpContext context, Exception exception, int statusCode, string errorCode)
+    private async Task HandleExceptionAsync(HttpContext context, Exception exception)
     {
+        var (statusCode, errorCode, errorType) = exception switch
+        {
+            BusinessRuleViolationException brEx =>
+                (brEx.HttpStatusCode, brEx.ErrorCode.GetCode(), "BusinessRuleViolation"),
+
+            ResourceNotFoundException rnfEx =>
+                (rnfEx.HttpStatusCode, rnfEx.ErrorCode.GetCode(), "ResourceNotFound"),
+
+            DuplicateResourceException drEx =>
+                (drEx.HttpStatusCode, drEx.ErrorCode.GetCode(), "DuplicateResource"),
+
+            ConcurrencyException cEx =>
+                (cEx.HttpStatusCode, cEx.ErrorCode.GetCode(), "ConcurrencyConflict"),
+
+            // Catch-all for any other LibraryException subclass added in the future
+            LibraryException libEx =>
+                (libEx.HttpStatusCode, libEx.ErrorCode.GetCode(), "DomainError"),
+
+            _ =>
+                (StatusCodes.Status500InternalServerError, "INTERNAL_SERVER_ERROR", "UnhandledError")
+        };
+
+        // Log domain exceptions as warnings; unexpected exceptions as errors
+        if (exception is LibraryException)
+            _logger.LogWarning(exception, "Domain exception [{ErrorType}]: {Message}", errorType, exception.Message);
+        else
+            _logger.LogError(exception, "Unhandled exception: {Message}", exception.Message);
+
         context.Response.ContentType = "application/json";
         context.Response.StatusCode = statusCode;
 
         var response = ErrorResponse.Create(errorCode, exception.Message, statusCode);
-        var json = JsonSerializer.Serialize(response, new JsonSerializerOptions { PropertyNamingPolicy = JsonNamingPolicy.CamelCase });
+        var json = JsonSerializer.Serialize(response, JsonOptions);
 
-        return context.Response.WriteAsync(json);
+        await context.Response.WriteAsync(json);
     }
 }
