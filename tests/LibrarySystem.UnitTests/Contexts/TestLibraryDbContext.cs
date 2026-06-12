@@ -74,7 +74,7 @@ public class TestLibraryDbContext : LibraryDbContext
 
     private void DetachOrphanedLoans()
     {
-        // Find all deleted members
+     
         var deletedMembers = ChangeTracker.Entries<Member>()
             .Where(e => e.State == EntityState.Deleted)
             .Select(e => e.Entity.Id)
@@ -82,7 +82,7 @@ public class TestLibraryDbContext : LibraryDbContext
 
         if (!deletedMembers.Any()) return;
 
-        // Detach any tracked loans that belong to these deleted members
+     
         var orphanedLoans = ChangeTracker.Entries<Loan>()
             .Where(e => deletedMembers.Contains(e.Entity.MemberId))
             .ToList();
@@ -95,7 +95,7 @@ public class TestLibraryDbContext : LibraryDbContext
 
     private void SetRowVersions()
     {
-        // Find all added or modified entities in the change tracker
+       
         var entries = ChangeTracker.Entries()
             .Where(e => e.State == EntityState.Added || e.State == EntityState.Modified);
 
@@ -103,10 +103,10 @@ public class TestLibraryDbContext : LibraryDbContext
 
         foreach (var entry in entries)
         {
-            // Look for a RowVersion property (often configured as a concurrency token/timestamp)
+           
             var rowVersionProperty = entry.Properties.FirstOrDefault(p => p.Metadata.Name == "RowVersion");
 
-            // If the property exists and is empty/null, assign a dummy value
+          
             if (rowVersionProperty != null)
             {
                 var currentValue = rowVersionProperty.CurrentValue as byte[];
