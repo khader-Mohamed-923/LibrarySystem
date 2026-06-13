@@ -18,9 +18,6 @@ A production-grade **Library Management System** REST API built with **.NET 10**
 10. [Exception Handling](#-exception-handling)
 11. [Testing Strategy](#-testing-strategy)
 12. [Performance & Load Testing](#-performance--load-testing)
-13. [Development Roadmap](#-development-roadmap)
-14. [Future Improvements](#-future-improvements)
-
 ---
 
 ## 🧭 Overview
