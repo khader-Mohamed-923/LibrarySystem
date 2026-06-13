@@ -4,7 +4,8 @@ namespace LibrarySystem.Data.Interfaces;
 
 public interface IBookRepository
 {
-    Task<Book?> GetByIdAsync(int id);
+    Task<Book?> GetByIdAsync(int id, bool track = false);
+    Task<Book?> GetByIdWithUpdLockAsync(int id);
     Task<IReadOnlyList<Book>> GetAllAsync();
     Task AddAsync(Book book);
     void Update(Book book, byte[]? rowVersion = null);

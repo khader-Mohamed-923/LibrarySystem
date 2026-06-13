@@ -14,6 +14,7 @@ builder.Services.AddApplicationServices();
 
 var app = builder.Build();
 
+await app.SeedDatabaseAsync();
 app.UseGlobalExceptionMiddleware();
 
 if (app.Environment.IsDevelopment())

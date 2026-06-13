@@ -34,7 +34,7 @@ public class LoanLifecycleTests : IClassFixture<LibraryWebAppFactory>, IAsyncLif
         var loan = wrapper!.Data;
         loan.ShouldNotBeNull();
         loan!.ReturnedAt.ShouldBeNull();
-        
+
         var expectedDue = DateTime.UtcNow.AddDays(14);
         loan.DueDate.ShouldBeInRange(expectedDue.AddSeconds(-5), expectedDue.AddSeconds(5));
     }
@@ -55,7 +55,6 @@ public class LoanLifecycleTests : IClassFixture<LibraryWebAppFactory>, IAsyncLif
     [Fact]
     public async Task BorrowBook_WhenNoCopiesAvailable_Returns422WithMessage()
     {
-        // Arrange
         var (bookId, memberId) = await GetAvailableBookAndMember();
 
         await using var scope = _factory.CreateDbScope();
@@ -64,10 +63,8 @@ public class LoanLifecycleTests : IClassFixture<LibraryWebAppFactory>, IAsyncLif
         book!.AvailableCopies = 0;
         await db.SaveChangesAsync();
 
-        // Act
         var response = await _client.PostAsJsonAsync("/api/loans", new { memberId, bookId });
 
-        // Assert
         response.StatusCode.ShouldBe(HttpStatusCode.UnprocessableEntity);
         var body = await response.Content.ReadAsStringAsync();
         body.ToLower().ShouldContain("available");
@@ -159,6 +156,7 @@ public class LoanLifecycleTests : IClassFixture<LibraryWebAppFactory>, IAsyncLif
         var borrow1Wrapper = await borrow1.Content.ReadFromJsonAsync<ApiResponse<LoanDto>>();
         var loan1 = borrow1Wrapper!.Data;
         await _client.PutAsync($"/api/loans/{loan1!.Id}/return", null);
+
         var borrow2 = await _client.PostAsJsonAsync("/api/loans", new { memberId = member2.Id, bookId = book.Id });
         borrow2.EnsureSuccessStatusCode();
 
@@ -166,7 +164,7 @@ public class LoanLifecycleTests : IClassFixture<LibraryWebAppFactory>, IAsyncLif
         finalBook.AvailableCopies.ShouldBe(initial - 1);
     }
 
-    // ── Helper methods ──────────────────────────────────────────────────
+    
 
     private async Task<List<BookDto>> GetAllBooks()
     {
@@ -206,21 +204,20 @@ public class LoanLifecycleTests : IClassFixture<LibraryWebAppFactory>, IAsyncLif
     private async Task<List<int>> GetThreeDifferentBooks()
     {
         var books = await GetAllBooks();
-        return books.Where(b => b.AvailableCopies > 0 && b.Title != "Fully Booked").Take(3).Select(b => b.Id).ToList();
+        return books.Where(b => b.AvailableCopies > 0 && b.Title != "Fully Booked")
+                    .Take(3).Select(b => b.Id).ToList();
     }
 
     private async Task<int> GetAnotherAvailableBook(List<int> excludeIds)
     {
         var books = await GetAllBooks();
         var book = books.FirstOrDefault(b => b.AvailableCopies > 0 && !excludeIds.Contains(b.Id));
-        
+
         if (book == null)
-        {
             throw new InvalidOperationException(
-                $"Test Data Setup Failure: Not enough distinct available books to satisfy the test condition. " +
-                $"Attempted to find an available book not in the excluded list [{string.Join(", ", excludeIds)}], but none were found. " +
+                $"Test Data Setup Failure: Not enough distinct available books. " +
+                $"Excluded: [{string.Join(", ", excludeIds)}]. " +
                 "Ensure your seeded test database has enough unique books in stock.");
-        }
 
         return book.Id;
     }
@@ -239,22 +236,15 @@ public class LoanLifecycleTests : IClassFixture<LibraryWebAppFactory>, IAsyncLif
     {
         await using var scope = _factory.CreateDbScope();
         var db = scope.ServiceProvider.GetRequiredService<LibraryDbContext>();
-        
-        // Remove all loans
+
         db.Loans.RemoveRange(db.Loans);
-        
-        // CRITICAL FIX: Reset available copies back to total copies!
-        // Otherwise, test state drifts because deleted loans don't automatically restore book inventory.
+
         var books = db.Books.ToList();
         foreach (var book in books)
-        {
             book.AvailableCopies = book.TotalCopies;
-        }
 
         await db.SaveChangesAsync();
     }
-
-    // ── DTOs matching the API response shape ────────────────────────────
 
     private record ApiResponse<T>(bool Success, T? Data, string? Message);
     private record BookDto(int Id, string Title, int AvailableCopies);
