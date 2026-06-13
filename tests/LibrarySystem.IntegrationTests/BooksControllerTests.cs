@@ -49,7 +49,7 @@ public class BooksControllerTests : IClassFixture<LibraryWebAppFactory>
     [Fact]
     public async Task GetBookById_WithValidId_ReturnsCorrectBook()
     {
-        // First, dynamically fetch all books and find "Clean Code" by title
+       
         var listResponse = await _client.GetAsync("/api/books");
         listResponse.EnsureSuccessStatusCode();
         var listWrapper = await listResponse.Content.ReadFromJsonAsync<ApiResponse<List<BookDto>>>();
@@ -132,7 +132,7 @@ public class BooksControllerTests : IClassFixture<LibraryWebAppFactory>
         body.ShouldNotBeNullOrEmpty();
     }
 
-    // ── DTOs matching the API response shape ────────────────────────────
+
 
     private record ApiResponse<T>(bool Success, T? Data, string? Message);
     private record BookDto(int Id, string Title, string Author, string ISBN,
