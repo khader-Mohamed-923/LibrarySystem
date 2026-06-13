@@ -36,77 +36,71 @@ public class LoanService : ILoanService
 
     public async Task<LoanResponse> LoanBookAsync(LoanBookRequest request)
     {
-        var member = await _memberRepository.GetByIdAsync(request.MemberId);
-        if (member is null)
-            throw new ResourceNotFoundException(ErrorCode.MEMBER_NOT_FOUND);
+        // 1. Transaction Management: Wrap everything to ensure atomic Read -> Lock -> Update -> Commit
+        await using var transaction = await _unitOfWork.BeginTransactionAsync();
 
-        var book = await _bookRepository.GetByIdAsync(request.BookId);
-        if (book is null)
-            throw new ResourceNotFoundException(ErrorCode.BOOK_NOT_FOUND);
-
-        if (book.AvailableCopies <= 0)
-            throw new BusinessRuleViolationException(ErrorCode.BOOK_NOT_AVAILABLE);
-
-        if (member.OutstandingFine > 0)
-            throw new BusinessRuleViolationException(ErrorCode.OUTSTANDING_FINE);
-
-        var hasOverdue = await _loanRepository.HasOverdueLoanAsync(request.MemberId);
-        if (hasOverdue)
-            throw new BusinessRuleViolationException(ErrorCode.OVERDUE_BOOKS);
-
-        var activeCount = await _loanRepository.GetActiveLoanCountForMemberAsync(request.MemberId);
-        if (activeCount >= MaxActiveLoans)
-            throw new BusinessRuleViolationException(ErrorCode.LOAN_LIMIT_EXCEEDED);
-
-        // 🎯 تعديل التوقيت هنا: سحبنا الوقت من الـ Provider المحقون من بره
-        var utcNow = _timeProvider.GetUtcNow().DateTime;
-        
-        var loan = new Loan
+        try
         {
-            MemberId = request.MemberId,
-            BookId = request.BookId,
-            LoanDate = utcNow,
-            DueDate = utcNow.AddDays(LoanPeriodDays),
-            IsReturned = false
-        };
+            var member = await _memberRepository.GetByIdAsync(request.MemberId);
+            if (member is null)
+                throw new ResourceNotFoundException(ErrorCode.MEMBER_NOT_FOUND);
 
-        const int maxRetries = 3;
-        for (var attempt = 1; attempt <= maxRetries; attempt++)
-        {
-            var trackedBook = await _bookRepository.GetByIdAsync(request.BookId);
+            // 2. Pessimistic Locking: Fetch with UPDLOCK to lock the row in the database until transaction ends
+            var trackedBook = await _bookRepository.GetByIdWithUpdLockAsync(request.BookId);
+            
+            if (trackedBook is null)
+                throw new ResourceNotFoundException(ErrorCode.BOOK_NOT_FOUND);
 
-            if (trackedBook is null || trackedBook.AvailableCopies <= 0)
+            if (trackedBook.AvailableCopies <= 0)
                 throw new BusinessRuleViolationException(ErrorCode.BOOK_NOT_AVAILABLE);
+
+            if (member.OutstandingFine > 0)
+                throw new BusinessRuleViolationException(ErrorCode.OUTSTANDING_FINE);
+
+            var hasOverdue = await _loanRepository.HasOverdueLoanAsync(request.MemberId);
+            if (hasOverdue)
+                throw new BusinessRuleViolationException(ErrorCode.OVERDUE_BOOKS);
+
+            var activeCount = await _loanRepository.GetActiveLoanCountForMemberAsync(request.MemberId);
+            if (activeCount >= MaxActiveLoans)
+                throw new BusinessRuleViolationException(ErrorCode.LOAN_LIMIT_EXCEEDED);
+
+            var utcNow = _timeProvider.GetUtcNow().DateTime;
+            
+            var loan = new Loan
+            {
+                MemberId = request.MemberId,
+                BookId = request.BookId,
+                LoanDate = utcNow,
+                DueDate = utcNow.AddDays(LoanPeriodDays),
+                IsReturned = false
+            };
+
+            await _loanRepository.AddAsync(loan);
 
             trackedBook.AvailableCopies--;
 
-            try
-            {
-                if (attempt == 1)
-                {
-                    await _loanRepository.AddAsync(loan);
-                }
-                
-                _bookRepository.Update(trackedBook);
+            await _unitOfWork.SaveChangesAsync();
+            
+            await transaction.CommitAsync();
 
-                await _unitOfWork.SaveChangesAsync();
+            loan.Book = trackedBook;
+            loan.Member = member;
 
-                loan.Book = trackedBook;
-                loan.Member = member;
-
-                return MapToResponse(loan);
-            }
-            catch (DbUpdateConcurrencyException ex)
-            {
-                if (attempt == maxRetries)
-                    throw new ConcurrencyException(ErrorCode.CONCURRENCY_CONFLICT);
-
-                var entry = ex.Entries.Single(e => e.Entity is Book);
-                await entry.ReloadAsync();
-            }
+            return MapToResponse(loan);
         }
-
-        throw new ConcurrencyException(ErrorCode.CONCURRENCY_CONFLICT);
+        catch (DbUpdateConcurrencyException)
+        {
+            await transaction.RollbackAsync();
+            
+            // 3. Concurrency Handling: Map EF concurrency conflicts to HTTP 409
+            throw new ConcurrencyException(ErrorCode.CONCURRENCY_CONFLICT);
+        }
+        catch (Exception)
+        {
+            await transaction.RollbackAsync();
+            throw;
+        }
     }
 
     public async Task<LoanResponse> ReturnBookAsync(int loanId)
@@ -118,34 +112,50 @@ public class LoanService : ILoanService
         if (loan.IsReturned)
             throw new BusinessRuleViolationException(ErrorCode.ALREADY_RETURNED);
 
-        // 🎯 تعديل التوقيت هنا برضه: سحبنا الوقت من الـ Provider
+      
         var utcNow = _timeProvider.GetUtcNow().DateTime;
         
-        loan.IsReturned = true;
-        loan.ReturnedAt = utcNow;
-
-        // Calculate fine if overdue
-        if (utcNow > loan.DueDate)
+        const int maxRetries = 3;
+        for (var attempt = 1; attempt <= maxRetries; attempt++)
         {
-            var overdueDays = (int)(utcNow - loan.DueDate).TotalDays;
-            if (overdueDays > 0)
+            loan.IsReturned = true;
+            loan.ReturnedAt = utcNow;
+
+            
+            if (utcNow > loan.DueDate)
             {
-                loan.FineAmount = overdueDays * FinePerDay;
-                loan.Member.OutstandingFine += loan.FineAmount;
+                var overdueDays = (int)(utcNow - loan.DueDate).TotalDays;
+                if (overdueDays > 0)
+                {
+                    loan.FineAmount = overdueDays * FinePerDay;
+                    loan.Member.OutstandingFine += loan.FineAmount;
+                }
+            }
+
+            if (loan.Book != null)
+            {
+                loan.Book.AvailableCopies++;
+            }
+
+            try
+            {
+                await _unitOfWork.SaveChangesAsync();
+                return MapToResponse(loan);
+            }
+            catch (DbUpdateConcurrencyException ex)
+            {
+                if (attempt == maxRetries)
+                    throw new ConcurrencyException(ErrorCode.CONCURRENCY_CONFLICT);
+
+                
+                foreach (var entry in ex.Entries)
+                {
+                    await entry.ReloadAsync();
+                }
             }
         }
 
-        _loanRepository.Update(loan);
-        _memberRepository.Update(loan.Member);
-
-        if (loan.Book != null)
-        {
-            loan.Book.AvailableCopies++;
-        }
-
-        await _unitOfWork.SaveChangesAsync();
-
-        return MapToResponse(loan);
+        throw new ConcurrencyException(ErrorCode.CONCURRENCY_CONFLICT);
     }
 
     public async Task<IEnumerable<LoanResponse>> GetLoansByMemberAsync(int memberId)
