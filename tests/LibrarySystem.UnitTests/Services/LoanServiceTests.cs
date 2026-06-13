@@ -229,9 +229,7 @@ public class LoanServiceTests
     };
 }
 
-/// <summary>
-/// Minimal TimeProvider fake for unit testing.
-/// </summary>
+
 internal sealed class FakeTimeProvider : TimeProvider
 {
     private DateTimeOffset _utcNow;

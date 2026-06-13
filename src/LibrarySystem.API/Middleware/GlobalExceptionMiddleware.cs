@@ -48,7 +48,7 @@ public class GlobalExceptionMiddleware
             ConcurrencyException cEx =>
                 (cEx.HttpStatusCode, cEx.ErrorCode.GetCode(), "ConcurrencyConflict"),
 
-            // Catch-all for any other LibraryException subclass added in the future
+           
             LibraryException libEx =>
                 (libEx.HttpStatusCode, libEx.ErrorCode.GetCode(), "DomainError"),
 
@@ -56,7 +56,7 @@ public class GlobalExceptionMiddleware
                 (StatusCodes.Status500InternalServerError, "INTERNAL_SERVER_ERROR", "UnhandledError")
         };
 
-        // Log domain exceptions as warnings; unexpected exceptions as errors
+      
         if (exception is LibraryException)
             _logger.LogWarning(exception, "Domain exception [{ErrorType}]: {Message}", errorType, exception.Message);
         else

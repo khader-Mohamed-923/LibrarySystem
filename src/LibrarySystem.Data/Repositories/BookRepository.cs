@@ -14,11 +14,22 @@ public class BookRepository : IBookRepository
         _context = context;
     }
 
-    public async Task<Book?> GetByIdAsync(int id)
+    public async Task<Book?> GetByIdAsync(int id, bool track = false)
+    {
+        var query = _context.Books.AsQueryable();
+        if (!track)
+        {
+            query = query.AsNoTracking();
+        }
+        return await query.FirstOrDefaultAsync(b => b.Id == id);
+    }
+
+    public async Task<Book?> GetByIdWithUpdLockAsync(int id)
     {
         return await _context.Books
-            .AsNoTracking()
-            .FirstOrDefaultAsync(b => b.Id == id);
+            .FromSqlInterpolated($"SELECT * FROM Books WITH (UPDLOCK, ROWLOCK) WHERE Id = {id}")
+            .AsTracking()
+            .FirstOrDefaultAsync();
     }
 
 
